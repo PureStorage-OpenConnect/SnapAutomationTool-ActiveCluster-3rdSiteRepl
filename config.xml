@@ -1,0 +1,24 @@
+<main>
+    <general>
+        <KeyFile>AES.key</KeyFile>
+    </general>
+    <FlashArray>
+        <SourceArray></SourceArray>
+        <TargetArray></TargetArray>
+        <User>pureuser</User>
+        <SecureFile>SecFileFA.txt</SecureFile>
+        <POD></POD>
+        <WaitTransferSeconds>60</WaitTransferSeconds>
+        <TargetPrefix>COPY</TargetPrefix>
+        <TargetRetention>28</TargetRetention>
+    </FlashArray>
+    <vmware>
+        <vCenter></vCenter>
+        <User></User>
+        <SecureFile>SecFileVC.txt</SecureFile>
+        <Datastores>
+            <DatastoreName></DatastoreName>
+        </Datastores>
+        <WaitTaskSeconds>10</WaitTaskSeconds>
+    </vmware>
+</main>
