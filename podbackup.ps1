@@ -1,11 +1,27 @@
-﻿#Description: Automation for 3rd site replication from ActiveCluster -> BACKUP
+﻿<#
+.SYNOPSIS 
+    This script automates a VM snapshot creation in ESXi environment and it do the 3rd site replication process from an ActiveCluster in Pure Storage environment.
 
-#Author: Gabor Horvath - Professional Service Engineer
-#E-mail: gabor@purestorage.com
-#Copyright: Pure Storage Inc.
-#Changed: 29.01.2018
-#Status: Public
-#Version: 1.0
+.DETAILS
+    The most important input is the POD name and the ESXi datastore (When the vmware tags are defined in the config file). The script takes VM snapshots of those stored on the datastore and after that do the replikation from ActiveCluster to 3rd site.
+
+.PARAMETER Config
+    Name of config file. The default value is config.xml
+
+.PARAMETER ApplyRetention
+    The suffix retention will be applied.
+
+.PARAMETER OverwriteStandaloneTarget
+    It create a volume (when not exists) that is always overwritten with the last snapshot.
+
+.NOTES
+    Author: Gabor Horvath - Professional Service Engineer
+    E-mail: gabor@purestorage.com
+    Copyright: Pure Storage Inc.
+    Changed: 29.01.2018
+    Status: Public
+    Version: 1.0
+ #>
 
 
 [CmdletBinding()]
@@ -14,7 +30,6 @@ Param (
     [switch]$ApplyRetention,
     [switch]$OverwriteStandaloneTarget
 )
-
 
 #########################################
 # Initializing/checking section         #
