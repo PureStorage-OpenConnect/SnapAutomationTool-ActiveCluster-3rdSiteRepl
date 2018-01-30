@@ -2,9 +2,6 @@
 
 #Author: Gabor Horvath - Professional Service Engineer
 #Copyright: Pure Storage GmbH.
-#Changed: 22.01.2018
-#Status: Public
-#Version: 1.0
 
 
 function getTimeStamp

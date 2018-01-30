@@ -1,11 +1,27 @@
-﻿#Description: Encrypt with AES the APIToken
+﻿<#
+.SYNOPSIS 
+    This script generate a encrypted password for credentials.
 
-#Author: Gabor Horvath - Professional Service Engineer
-#E-mail: gabor@purestorage.com
-#Copyright: Pure Storage Inc.
-#Changed: 11.12.2017
-#Status: Public
-#Version: 1.0
+.DESCRIPTION
+    
+.PARAMETER KeyFile
+    Whit this file will be the encryption mechanism salted. Default value: AES.key
+
+.PARAMETER NewKeyRequired
+    New key file will be generated. Attention! When you generates a new key file than you need generate the password files
+
+.PARAMETER NewSecurePasswordFile
+    Name of encrypted password file. Default parameter: SecFileFA.txt
+
+.PARAMETER Password
+    Password
+
+.NOTES
+    Author: Gabor Horvath - Professional Service Engineer
+    E-mail: gabor@purestorage.com
+    Copyright: Pure Storage Inc.
+ #>
+
 
 Param (
     [Parameter(Mandatory=$False,Position=1)]
