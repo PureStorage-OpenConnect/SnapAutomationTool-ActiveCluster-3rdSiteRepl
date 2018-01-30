@@ -24,6 +24,9 @@
  #>
 
 
+ #Requires -Version 3
+
+
 [CmdletBinding()]
 Param (
     [Parameter(Mandatory=$False,Position=1)][string]$Config = 'config.xml',
