@@ -2,7 +2,7 @@
 .SYNOPSIS 
     This script automates a VM snapshot creation in ESXi environment and it do the 3rd site replication process from an ActiveCluster in Pure Storage environment.
 
-.DETAILS
+.DESCRIPTION
     The most important input is the POD name and the ESXi datastore (When the vmware tags are defined in the config file). The script takes VM snapshots of those stored on the datastore and after that do the replikation from ActiveCluster to 3rd site.
 
 .PARAMETER Config
@@ -18,9 +18,6 @@
     Author: Gabor Horvath - Professional Service Engineer
     E-mail: gabor@purestorage.com
     Copyright: Pure Storage Inc.
-    Changed: 29.01.2018
-    Status: Public
-    Version: 1.0
  #>
 
 
@@ -283,7 +280,7 @@ outLog "SECTION FlashArray - source" "Console"
 
       #Check the volumes if contained in the async PGroup. When not containing than it will be added
         if (!($resultPGroup | Where-Object {$_.volumes -match $basename})) {
-            outLog "Adding the volume '$($basename)' tothe protection group '$($global:config.main.FlashArray.POD)-async'..." "Console"
+            outLog "   +---> Adding the volume '$($basename)' tothe protection group '$($global:config.main.FlashArray.POD)-async'..." "Console"
             outLog (Add-PfaVolumesToProtectionGroup -Array $global:FlashArraySourceObj -Name "$($global:config.main.FlashArray.POD)-async" -VolumesToAdd $basename | Out-String) "Debug"
         }
 
@@ -417,11 +414,12 @@ outLog "SECTION FlashArray - target" "Console"
             if ($OverwriteStandaloneTarget) {
                 $res = Get-PfaVolumes -Array $global:FlashArrayTargetObj | Where-Object { $_.name -like $actuallyStandaloneVolume }
                 if ($res -ne $null) {
-                    outLog "Owerwriteing the Standalone volume '$actuallyStandaloneVolume'  with the SnapshotCopy '$newTargetVolumeName' ... " "Console"
+                    outLog "      +---> Owerwriteing the Standalone volume '$actuallyStandaloneVolume'  with the SnapshotCopy '$newTargetVolumeName' ... " "Console"
                     outLog (New-PfaVolume -Array $global:FlashArrayTargetObj -Source $newTargetVolumeName -VolumeName $actuallyStandaloneVolume -Overwrite | Out-String) "Debug"
                 } else {
-                    outLog "Creating the Standalone volume '$actuallyStandaloneVolume' ... " "Debug"
+                    outLog "      +---> Creating the Standalone volume '$actuallyStandaloneVolume' ... " "Debug"
                     New-PfaVolume -Array $global:FlashArrayTargetObj -VolumeName $actuallyStandaloneVolume -Size 1 -Unit M | Out-Null
+                    outLog "      +---> Owerwriteing the Standalone volume '$actuallyStandaloneVolume'  with the SnapshotCopy '$newTargetVolumeName' ... " "Console"
                     outLog (New-PfaVolume -Array $global:FlashArrayTargetObj -Source $newTargetVolumeName -VolumeName $actuallyStandaloneVolume -Overwrite | Out-String) "Debug"
                 }
             }
@@ -444,7 +442,7 @@ outLog "SECTION FlashArray - target" "Console"
                         for ($i = 0; $i -lt $countOfDelete; $i++)
                         {
                             $targetVolumeNameToDelete = ($sortedHashVolumesCreated | Select-Object -Index $i).Value
-                            outLog "The following volmue will be deleted: $targetVolumeNameToDelete" "Console"
+                            outLog "   +---> The following volmue will be deleted: $targetVolumeNameToDelete" "Console"
                             outLog (Remove-PfaVolumeOrSnapshot -Array $global:FlashArrayTargetObj -Name $targetVolumeNameToDelete | Out-String) "Debug"
                             outLog (Remove-PfaVolumeOrSnapshot -Array $global:FlashArrayTargetObj -Name $targetVolumeNameToDelete -Eradicate | Out-String) "Debug"
                         }
