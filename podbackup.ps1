@@ -4,6 +4,7 @@
 
 .DESCRIPTION
     The most important input is the POD name and the ESXi datastore (When the vmware tags are defined in the config file). The script takes VM snapshots of those stored on the datastore and after that do the replikation from ActiveCluster to 3rd site.
+    Important! This version for old PowerCLI
 
 .PARAMETER Config
     Name of config file. The default value is config.xml
@@ -21,7 +22,8 @@
  #>
 
 
- #Requires -Version 3
+#Requires -Version 3
+#Requires -Modules PureStoragePowerShellSDK
 
 
 [CmdletBinding()]
@@ -30,6 +32,7 @@ Param (
     [switch]$ApplyRetention,
     [switch]$OverwriteStandaloneTarget
 )
+
 
 #########################################
 # Initializing/checking section         #
@@ -44,14 +47,13 @@ $global:configFile = $Config
 $global:logFile = "runlog_" + (Get-Date -Format "yyyyMMdd_HHmmss").ToString() + ".log"
 
 Write-Debug "Start (after parameter definition)"
-if ($PSVersionTable.PSVersion.Major -lt 3) { Write-Error "The PowerShell version is $($PSVersionTable.PSVersion.Major). Please upgrade the PowerShell version to 3 or greater!" }
+
 
 #region Reading config file
     Write-Debug "REGION Reading config file"
     $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
     try {
         Import-Module -Name $ScriptDirectory\functions.psm1 -Force
-        Import-Module -Name PureStoragePowerShellSDK -Force
     }
     catch {
         Write-Error "Error while loading functions.psm1!"
@@ -67,10 +69,70 @@ if ($PSVersionTable.PSVersion.Major -lt 3) { Write-Error "The PowerShell version
     outLog "Config: $($global:config.OuterXml)" "Debug"
 #endregion
 
+#region Import modules
+    outLog "REGION Import modules" "Debug"
+
+    if ($global:config.main.vmware) {
+        $moduleList = @(
+            "VMware.VimAutomation.Core",
+            "VMware.VimAutomation.Storage"
+        )
+
+        $productName = "PowerCLI"
+        $productShortName = "PowerCLI"
+
+        $loadingActivity = "Loading $productName"
+        $script:completedActivities = 0
+        $script:percentComplete = 0
+        $script:currentActivity = ""
+        $script:totalActivities = `
+        $moduleList.Count + 1
+
+        function ReportStartOfActivity($activity) {
+           $script:currentActivity = $activity
+           Write-Progress -Activity $loadingActivity -CurrentOperation $script:currentActivity -PercentComplete $script:percentComplete
+        }
+        function ReportFinishedActivity() {
+           $script:completedActivities++
+           $script:percentComplete = (100.0 / $totalActivities) * $script:completedActivities
+           $script:percentComplete = [Math]::Min(99, $percentComplete)
+   
+           Write-Progress -Activity $loadingActivity -CurrentOperation $script:currentActivity -PercentComplete $script:percentComplete
+        }
+
+      # Load modules
+        function LoadVmwareModules(){
+           ReportStartOfActivity "Searching for $productShortName module components..."
+   
+           $loaded = Get-Module -Name $moduleList -ErrorAction Ignore | % {$_.Name}
+           $registered = Get-Module -Name $moduleList -ListAvailable -ErrorAction Ignore | % {$_.Name}
+           $notLoaded = $registered | ? {$loaded -notcontains $_}
+   
+           ReportFinishedActivity
+   
+           foreach ($module in $registered) {
+              if ($loaded -notcontains $module) {
+		         ReportStartOfActivity "Loading module $module"
+         
+		         Import-Module $module
+		 
+		         ReportFinishedActivity
+              }
+           }
+        }
+
+        LoadVmwareModules
+    }
+#endregion
+
+
 #region Preparation of credentials
     outLog "REGION Preparation of credentials" "Debug"
     $credFlashArray = createCredential "FlashArray"
-    if ($global:config.main.vmware) { $credvCenter = createCredential "vmware" }
+
+    if ($global:config.main.vmware) {
+        $credvCenter = createCredential "vmware"
+    }
 #endregion
 
 
@@ -442,7 +504,7 @@ outLog "SECTION FlashArray - target" "Console"
                         for ($i = 0; $i -lt $countOfDelete; $i++)
                         {
                             $targetVolumeNameToDelete = ($sortedHashVolumesCreated | Select-Object -Index $i).Value
-                            outLog "   +---> The following volmue will be deleted: $targetVolumeNameToDelete" "Console"
+                            outLog "   +--->The following volmue will be deleted: $targetVolumeNameToDelete" "Console"
                             outLog (Remove-PfaVolumeOrSnapshot -Array $global:FlashArrayTargetObj -Name $targetVolumeNameToDelete | Out-String) "Debug"
                             outLog (Remove-PfaVolumeOrSnapshot -Array $global:FlashArrayTargetObj -Name $targetVolumeNameToDelete -Eradicate | Out-String) "Debug"
                         }

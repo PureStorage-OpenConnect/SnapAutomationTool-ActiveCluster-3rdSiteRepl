@@ -15,7 +15,6 @@ Files:
  - encryptAES.ps1  -> Its creating the key file and the encrypted password(s)
  - function.psm1  -> stored functions for the main script
  - podbackup.ps1  -> Main script
- - podbackup_oldpowercli.ps1  -> When you has a PowerShell Verion 3 than use this.
 
 Minimum Requirements:
  - PowerShell 3
