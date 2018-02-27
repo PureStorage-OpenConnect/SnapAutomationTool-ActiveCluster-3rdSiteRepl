@@ -22,15 +22,10 @@
  #>
 
 
-<<<<<<< HEAD
 #Requires -Version 5
 #Requires -Modules @{ModuleName='PureStoragePowerShellSDK'; ModuleVersion='1.7.4.0'}
 #Requires -Modules @{ModuleName='VMware.VimAutomation.Core'; ModuleVersion='6.0.0.0'}
 Using module @{ModuleName='.\ClassDefinitionandFunctions.psd1'; RequiredVersion='1.0.0.0'}
-=======
-#Requires -Version 3
-#Requires -Modules PureStoragePowerShellSDK
->>>>>>> 9ebc3cc226ddd9a0806f88fd190ce21fa6ca6b74
 
 
 [CmdletBinding()]
@@ -40,13 +35,6 @@ Param (
     [switch]$OverwriteStandaloneTarget
 )
 
-<<<<<<< HEAD
-=======
-
-#########################################
-# Initializing/checking section         #
-#########################################
->>>>>>> 9ebc3cc226ddd9a0806f88fd190ce21fa6ca6b74
 
 Write-Debug "Start (after parameter definition)"
 
@@ -61,20 +49,14 @@ Set-Variable -Name InformationPreference -Value "SilentlyContinue" -Scope Global
 Set-Variable -Name WarningPreference -Value "Continue" -Scope Global -Force
 Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
 
-<<<<<<< HEAD
 
 [string]$global:ConfigFile = $ConfigFile
 [string]$global:LogFile = "runlog_" + (Get-Date -Format "yyyyMMdd_HHmmss").ToString() + ".log"
-=======
-Write-Debug "Start (after parameter definition)"
-
->>>>>>> 9ebc3cc226ddd9a0806f88fd190ce21fa6ca6b74
 
 #region Reading config file
     Write-Debug "REGION Reading config file"
     $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
     try {
-<<<<<<< HEAD
         Import-Module -Name $ScriptDirectory\GaborFunctions.psd1 -MinimumVersion 1.0.0.0 -Force 
     }
     catch {
@@ -84,9 +66,6 @@ Write-Debug "Start (after parameter definition)"
 
     try {
         Import-Module -Name $ScriptDirectory\BusinessLogicFunctions.psm1 -Force 
-=======
-        Import-Module -Name $ScriptDirectory\functions.psm1 -Force
->>>>>>> 9ebc3cc226ddd9a0806f88fd190ce21fa6ca6b74
     }
     catch {
         Write-Error "Error while loading BusinessLogicFunctions.psm1!"
@@ -115,73 +94,6 @@ Write-Debug "Start (after parameter definition)"
 
     $global:Config | Test-Xml -SchemaPath (&$XMLSchemaFile)
 
-<<<<<<< HEAD
-=======
-#region Import modules
-    outLog "REGION Import modules" "Debug"
-
-    if ($global:config.main.vmware) {
-        $moduleList = @(
-            "VMware.VimAutomation.Core",
-            "VMware.VimAutomation.Storage"
-        )
-
-        $productName = "PowerCLI"
-        $productShortName = "PowerCLI"
-
-        $loadingActivity = "Loading $productName"
-        $script:completedActivities = 0
-        $script:percentComplete = 0
-        $script:currentActivity = ""
-        $script:totalActivities = `
-        $moduleList.Count + 1
-
-        function ReportStartOfActivity($activity) {
-           $script:currentActivity = $activity
-           Write-Progress -Activity $loadingActivity -CurrentOperation $script:currentActivity -PercentComplete $script:percentComplete
-        }
-        function ReportFinishedActivity() {
-           $script:completedActivities++
-           $script:percentComplete = (100.0 / $totalActivities) * $script:completedActivities
-           $script:percentComplete = [Math]::Min(99, $percentComplete)
-   
-           Write-Progress -Activity $loadingActivity -CurrentOperation $script:currentActivity -PercentComplete $script:percentComplete
-        }
-
-      # Load modules
-        function LoadVmwareModules(){
-           ReportStartOfActivity "Searching for $productShortName module components..."
-   
-           $loaded = Get-Module -Name $moduleList -ErrorAction Ignore | % {$_.Name}
-           $registered = Get-Module -Name $moduleList -ListAvailable -ErrorAction Ignore | % {$_.Name}
-           $notLoaded = $registered | ? {$loaded -notcontains $_}
-   
-           ReportFinishedActivity
-   
-           foreach ($module in $registered) {
-              if ($loaded -notcontains $module) {
-		         ReportStartOfActivity "Loading module $module"
-         
-		         Import-Module $module
-		 
-		         ReportFinishedActivity
-              }
-           }
-        }
-
-        LoadVmwareModules
-    }
-#endregion
-
-
-#region Preparation of credentials
-    outLog "REGION Preparation of credentials" "Debug"
-    $credFlashArray = createCredential "FlashArray"
-
-    if ($global:config.main.vmware) {
-        $credvCenter = createCredential "vmware"
-    }
->>>>>>> 9ebc3cc226ddd9a0806f88fd190ce21fa6ca6b74
 #endregion
 
 #region Create objects
@@ -253,7 +165,6 @@ if ($global:Config.main.vmware) {
         for ($i = 0; $i -lt $luns.Count; $i++) {
             if ($luns[$i] -like 'naa.624a9370*') {
                 $volSerial = ($luns[$i].ToUpper()).substring(12)
-                $volSerial = "E9B7C03A266F4F010009C1D2" #REMOVE - To Test
                 $pureVol = $SourceFA.Volumes | Where-Object { $_.serial -eq $volSerial }
                 if (!($pureVol)) {
                     Out-Log "The volume 'Serial:$($volSerial)' isn't stored on FlashArray '$($global:Config.main.FlashArray.SourceArray)'! The VM snapshots won't created on the datastore '$($_.DatastoreName)'!" "Warning"
@@ -556,15 +467,9 @@ Out-Log "SECTION FlashArray - target" "Host"
                         for ($i = 0; $i -lt $countOfDelete; $i++)
                         {
                             $targetVolumeNameToDelete = ($sortedHashVolumesCreated | Select-Object -Index $i).Value
-<<<<<<< HEAD
                             Out-Log "   +--->The following volmue will be deleted: $targetVolumeNameToDelete" "Host"
                             Out-Log (Remove-PfaVolumeOrSnapshot -Array $TargetFA.Array -Name $targetVolumeNameToDelete | Out-String)
                             Out-Log (Remove-PfaVolumeOrSnapshot -Array $TargetFA.Array -Name $targetVolumeNameToDelete -Eradicate | Out-String)
-=======
-                            outLog "   +--->The following volmue will be deleted: $targetVolumeNameToDelete" "Console"
-                            outLog (Remove-PfaVolumeOrSnapshot -Array $global:FlashArrayTargetObj -Name $targetVolumeNameToDelete | Out-String) "Debug"
-                            outLog (Remove-PfaVolumeOrSnapshot -Array $global:FlashArrayTargetObj -Name $targetVolumeNameToDelete -Eradicate | Out-String) "Debug"
->>>>>>> 9ebc3cc226ddd9a0806f88fd190ce21fa6ca6b74
                         }
                     }
                 }
