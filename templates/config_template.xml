@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<main>
+  <general>
+    <KeyFile>AES.key</KeyFile>
+  </general>
+  <FlashArray>
+    <SourceArray></SourceArray>
+    <TargetArray></TargetArray>
+    <CredentialFile>SecCredFA.txt</CredentialFile>
+    <POD></POD>
+    <WaitTransferSeconds>60</WaitTransferSeconds>
+    <TargetPrefix>COPY</TargetPrefix>
+    <TargetRetention>28</TargetRetention>
+  </FlashArray>
+  <vmware>
+    <vCenter></vCenter>
+    <CredentialFile>SecCredVC.txt</CredentialFile>
+    <Datastores>
+      <DatastoreName></DatastoreName>
+    </Datastores>
+    <WaitTaskSeconds>20</WaitTaskSeconds>
+  </vmware>
+</main>

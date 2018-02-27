@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS 
-    This script generate a encrypted password for credentials.
+    This script generate a encrypted credentials.
 
 .DESCRIPTION
     
@@ -11,7 +11,10 @@
     New key file will be generated. Attention! When you generates a new key file than you need generate the password files
 
 .PARAMETER NewSecurePasswordFile
-    Name of encrypted password file. Default parameter: SecFileFA.txt
+    Name of encrypted password file. Default parameter: SecCredeFA.txt
+
+.PARAMETER UserName
+    User name
 
 .PARAMETER Password
     Password
@@ -30,14 +33,17 @@ Param (
     [switch]$NewKeyRequired,
 
     [Parameter(Mandatory=$False)]
-    [string]$NewSecurePasswordFile = "SecFileFA.txt",
+    [string]$NewSecureCredentialFile = "SecCredFA.txt",
 
+    [Parameter(Mandatory=$True)]
+    [string]$UserName,
+    
     [Parameter(Mandatory=$True)]
     [string]$Password
 )
 
 
-$ErrorActionPreference = "Stop"
+$originalErrorActionPreference = "Stop"
 
 if ($NewKeyRequired) {
     $Key = New-Object Byte[] 32
@@ -48,8 +54,11 @@ else {
     $key = Get-Content $KeyFile
 }
 
-$SecureAPITokenHash = ConvertTo-SecureString $Password -AsPlainText -Force
-$SecureAPITokenHashWithKey = $SecureAPITokenHash | ConvertFrom-SecureString -Key $key
-$SecureAPITokenHashWithKey | Out-File $NewSecurePasswordFile
+$null | Out-File $NewSecureCredentialFile
 
-Write-Output $SecureAPITokenHashWithKey
+@($UserName, $Password) | % {
+    $SecureHash = ConvertTo-SecureString $_ -AsPlainText -Force
+    $SecureHashWithKey = $SecureHash | ConvertFrom-SecureString -Key $key
+    $SecureHashWithKey | Out-File $NewSecureCredentialFile -Append
+}
+

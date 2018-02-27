@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+   <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+         <xs:element name="main">
+               <xs:complexType>
+                     <xs:sequence>
+                           <xs:element name="general">
+                                 <xs:complexType>
+                                       <xs:sequence>
+                                             <xs:element name="KeyFile" type="xs:string"></xs:element>
+                                       </xs:sequence>
+                                 </xs:complexType>
+                           </xs:element>
+                           <xs:element name="FlashArray">
+                                 <xs:complexType>
+                                       <xs:sequence>
+                                             <xs:element name="SourceArray" type="xs:string"></xs:element>
+                                             <xs:element name="TargetArray" type="xs:string"></xs:element>
+                                             <xs:element name="CredentialFile" type="xs:string"></xs:element>
+                                             <xs:element name="POD"></xs:element>
+                                             <xs:element name="WaitTransferSeconds" type="xs:int"></xs:element>
+                                             <xs:element name="TargetPrefix" type="xs:string"></xs:element>
+                                             <xs:element name="TargetRetention" type="xs:int"></xs:element>
+                                       </xs:sequence>
+                                 </xs:complexType>
+                           </xs:element>
+                     </xs:sequence>
+               </xs:complexType>
+         </xs:element>
+   </xs:schema>
