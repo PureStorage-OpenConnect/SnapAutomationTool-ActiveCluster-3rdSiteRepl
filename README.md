@@ -11,12 +11,15 @@ Features:
  - Apply the predefined retention on the 3rd site. (When the parameter given)
 
 Files:
- - config.xml  -> There is a config file.
- - encryptAES.ps1  -> Its creating the key file and the encrypted password(s)
- - function.psm1  -> stored functions for the main script
+ - BusinessLogicFunctions.psm1  -> This file stored the functions fo the business logic
+ - ClassDefinitionandFunctions.psd1  -> Manifest for ClassDefinitionandFunctions.psm1
+ - ClassDefinitionandFunctions.psm1  -> This file stored the classes and the class methods.
+ - EncryptCredential.ps1  -> Its creating the key file and the encrypted credential. (It isn't neccesary to the script running)
+ - GaborFunctions.psd1  -> Manifest for GaborFunctions.psm1
+ - GaborFunctions.psm1  -> Helper functions
  - podbackup.ps1  -> Main script
 
 Minimum Requirements:
- - PowerShell 3
+ - PowerShell 5.0
  - PowerCLI 6.0
  - PureStoragePowerShellSDK 1.7.4.0
