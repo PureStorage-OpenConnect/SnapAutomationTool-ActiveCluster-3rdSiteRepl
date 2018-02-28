@@ -13,7 +13,8 @@
                            <xs:element name="FlashArray">
                                  <xs:complexType>
                                        <xs:sequence>
-                                             <xs:element name="SourceArray" type="xs:string"></xs:element>
+                                             <xs:element name="SourceArray1" type="xs:string"></xs:element>
+                                             <xs:element name="SourceArray2" type="xs:string"></xs:element>
                                              <xs:element name="TargetArray" type="xs:string"></xs:element>
                                              <xs:element name="CredentialFile" type="xs:string"></xs:element>
                                              <xs:element name="POD"></xs:element>

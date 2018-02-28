@@ -90,10 +90,7 @@ function Exit-Program
     
     Process {
         if ($global:ObjectList -ne $null) {
-            $global:ObjectList.Keys | % {
-                Out-Log "Disconnecting $($global:ObjectList.Item($_).Address)"
-                $global:ObjectList.Item($_).Disconnect()
-            }
+            $global:ObjectList.Keys | % { $global:ObjectList.Item($_).Disconnect() }
         }
     }
 
@@ -262,12 +259,12 @@ function Get-SecuredCredential
                 $Credential = New-Object System.Management.Automation.PSCredential((Get-EncryptedData -hash $SecureHashWithKey[0] -key $key), $DecryptedPassword)
                 return $Credential
             } else {
-                Out-Log "The credential file '$SecuredCredentialFile' at doesn't exist!" "Error"
-                Exit-Program -Exitcode 1    
+                Out-Log "The credential file '$SecuredCredentialFile' doesn't exist!" "Error"
+                Exit-Program -Exitcode 5
             }
         } else {
             Out-Log "The KeyFile '$KeyFile' doesn't exist!" "Error"
-            Exit-Program -Exitcode 1
+            Exit-Program -Exitcode 6
         }
     }
 

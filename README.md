@@ -15,6 +15,7 @@ Files:
  - ClassDefinitionandFunctions.psd1  -> Manifest for ClassDefinitionandFunctions.psm1
  - ClassDefinitionandFunctions.psm1  -> This file stored the classes and the class methods.
  - EncryptCredential.ps1  -> Its creating the key file and the encrypted credential. (It isn't neccesary to the script running)
+ - ErrorCodes  -> It contains the error codes and error messages
  - GaborFunctions.psd1  -> Manifest for GaborFunctions.psm1
  - GaborFunctions.psm1  -> Helper functions
  - podbackup.ps1  -> Main script

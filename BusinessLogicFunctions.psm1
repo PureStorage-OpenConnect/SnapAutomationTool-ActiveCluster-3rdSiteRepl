@@ -60,6 +60,7 @@ function Invoke-PureCLICommand
         try {
             $clires = New-PfaCLICommand -EndPoint $FlashArrayObject.Address -Credentials $FlashArrayObject.Credential -CommandText $Command
         } catch {
+            Out-Log "General error message:" "Error"
             Out-Log ($global:error[0].ToString()) "Error"
             Exit-Program -Exitcode 120
         }

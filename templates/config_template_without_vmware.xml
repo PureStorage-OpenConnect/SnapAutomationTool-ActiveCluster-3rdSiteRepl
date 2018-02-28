@@ -4,7 +4,8 @@
     <KeyFile>AES.key</KeyFile>
   </general>
   <FlashArray>
-    <SourceArray></SourceArray>
+    <SourceArray1></SourceArray1>
+    <SourceArray2></SourceArray2>
     <TargetArray></TargetArray>
     <CredentialFile>SecCredFA.txt</CredentialFile>
     <POD></POD>

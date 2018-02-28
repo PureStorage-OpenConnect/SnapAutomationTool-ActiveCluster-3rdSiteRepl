@@ -25,7 +25,7 @@
 #Requires -Version 5
 #Requires -Modules @{ModuleName='PureStoragePowerShellSDK'; ModuleVersion='1.7.4.0'}
 #Requires -Modules @{ModuleName='VMware.VimAutomation.Core'; ModuleVersion='6.0.0.0'}
-Using module @{ModuleName='.\ClassDefinitionandFunctions.psd1'; RequiredVersion='1.0.0.0'}
+Using module @{ModuleName='.\ClassDefinitionandFunctions.psd1'; RequiredVersion='1.0.1.0'}
 
 
 [CmdletBinding()]
@@ -44,8 +44,8 @@ $global:originalVariablePreferences = @{"DebugPreference" = $DebugPreference;
                                         "ErrorActionPreference" = $ErrorActionPreference
                                        }
 
-Set-Variable -Name DebugPreference -Value "SilentlyContinue" -Scope Global -Force
-Set-Variable -Name InformationPreference -Value "SilentlyContinue" -Scope Global -Force
+Set-Variable -Name DebugPreference -Value "Continue" -Scope Global -Force
+Set-Variable -Name InformationPreference -Value "Continue" -Scope Global -Force
 Set-Variable -Name WarningPreference -Value "Continue" -Scope Global -Force
 Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
 
@@ -57,7 +57,7 @@ Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
     Write-Debug "REGION Reading config file"
     $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
     try {
-        Import-Module -Name $ScriptDirectory\GaborFunctions.psd1 -MinimumVersion 1.0.0.0 -Force 
+        Import-Module -Name $ScriptDirectory\GaborFunctions.psd1 -MinimumVersion 1.0.1.0 -Force 
     }
     catch {
         Write-Error "Error while loading GaborFunctions.psd1!"
@@ -82,7 +82,7 @@ Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
     Out-Log "PARAMETER OverwriteStandaloneTarget: $($OverwriteStandaloneTarget)"
     Out-Log "CONFIG: $($global:Config.OuterXml)"
 
-    Out-Log "Checking Config file..." "Verbose"
+    Out-Log "Checking Config file..." "Information"
     $XmlValidationResult = $null
     $XMLSchemaFile = {
         if ($ConfigContent | Select-String -Pattern "<vmware>") {
@@ -99,24 +99,29 @@ Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
 #region Create objects
     Out-Log "REGION Create objects"
     if ([string]::IsNullOrEmpty($global:Config.main.general.KeyFile)) {
-            Out-Log "The attribute 'KeyFile' in the section 'general' is empty!" "Error"
-            Exit-Program -Exitcode 1
+            Out-Log "The element 'KeyFile' in the section 'general' is empty!" "Error"
+            Exit-Program -Exitcode 10
     }
 
-    $global:ObjectList = @{}
     $Section = @("FlashArray", "vmware")
     $Section | % {
         if ([string]::IsNullOrEmpty($global:Config.main.$_.CredentialFile)) {
-            Out-Log "The attribute 'CredentialFile' in the section '$_' is empty!" "Error"
-            Exit-Program -Exitcode 1
+            Out-Log "The element 'CredentialFile' in the section '$_' is empty!" "Error"
+            Exit-Program -Exitcode 11
         }
     }
 
+    $global:ObjectList = @{}
 
-    [FlashArray]$SourceFA = [FlashArray]::new(  $global:Config.main.FlashArray.SourceArray,
+    [FlashArray]$SourceFA1 = [FlashArray]::new(  $global:Config.main.FlashArray.SourceArray1,
                                                 (Get-SecuredCredential -SecuredCredentialFile $global:Config.main.FlashArray.CredentialFile -KeyFile $global:Config.main.general.KeyFile)
                                              )
-    $global:ObjectList.Add("SourceFA", $SourceFA)
+    $global:ObjectList.Add("SourceFA1", $SourceFA1)
+    
+    [FlashArray]$SourceFA2 = [FlashArray]::new(  $global:Config.main.FlashArray.SourceArray2,
+                                                (Get-SecuredCredential -SecuredCredentialFile $global:Config.main.FlashArray.CredentialFile -KeyFile $global:Config.main.general.KeyFile)
+                                             )
+    $global:ObjectList.Add("SourceFA2", $SourceFA2)
 
     [FlashArray]$TargetFA = [FlashArray]::new(  $global:Config.main.FlashArray.TargetArray,
                                                 (Get-SecuredCredential -SecuredCredentialFile $global:Config.main.FlashArray.CredentialFile -KeyFile $global:Config.main.general.KeyFile)
@@ -127,6 +132,14 @@ Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
         [vCenter]$vCenter = [vCenter]::new( $global:Config.main.vmware.vCenter,
                                             (Get-SecuredCredential -SecuredCredentialFile $global:Config.main.vmware.CredentialFile -KeyFile $global:Config.main.general.KeyFile)
                                           )
+        try {
+            Test-Connection $global:Config.main.vmware.vCenter -Count 1 | Out-Null
+        }
+        catch {
+            Out-Log "The vCenter '$($global:Config.main.vmware.vCenter)' isn't reachable over ICMP!" "Error"
+            $global:ObjectList = $null
+            Exit-Program -Exitcode 15
+        }
         $global:ObjectList.Add("vCenter", $vCenter)
     }
 
@@ -136,12 +149,29 @@ Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
 #region Connecting to the environment
     Out-Log "REGION Connecting to the environment"
 
-    Out-Log "Connecting..." "Verbose"
-    $global:ObjectList.Keys | % { $global:ObjectList.Item($_).Connect() }    
+    Out-Log "Connecting..." "Information"
+    
+    $global:ObjectList.Keys | % { $global:ObjectList.Item($_).Connect() }
+
+    $SourceActive = $null
+    if ($SourceFA1.Array) {
+        $SourceActive = $SourceFA1
+    } elseif ($SourceFA2.Array) {
+        Out-Log "Trying the second Array '$($SourceFA2.Address)'"
+        $SourceActive = $SourceFA2
+    } else {
+        Out-Log "Both ActiveCluster member are UNAVAILABLE!" "Error"
+        Exit-Program -Exitcode 20
+    }
+    
+    if (!($TargetFA.Array)) { Exit-Program -Exitcode 21 }
+    if ($global:ObjectList.ContainsKey("vCenter")) {
+        if (!($vCenter.VIServer)) { Exit-Program -Exitcode 22 }
+    }
 
     Out-Log "All Volumes:"
-    $SourceFA.Volumes = Get-PfaVolumes -Array $SourceFA.Array
-    Out-Log ($SourceFA.Volumes | Select-Object -Property Name,Serial | Format-Table -AutoSize | Out-String)
+    $SourceActive.Volumes = Get-PfaVolumes -Array $SourceActive.Array
+    Out-Log ($SourceActive.Volumes | Select-Object -Property Name,Serial | Format-Table -AutoSize | Out-String)
 #endregion
 
 
@@ -165,9 +195,10 @@ if ($global:Config.main.vmware) {
         for ($i = 0; $i -lt $luns.Count; $i++) {
             if ($luns[$i] -like 'naa.624a9370*') {
                 $volSerial = ($luns[$i].ToUpper()).substring(12)
-                $pureVol = $SourceFA.Volumes | Where-Object { $_.serial -eq $volSerial }
+                $volSerial = "E9B7C03A266F4F010009C369" #REMOVE
+                $pureVol = $SourceActive.Volumes | Where-Object { $_.serial -eq $volSerial }
                 if (!($pureVol)) {
-                    Out-Log "The volume 'Serial:$($volSerial)' isn't stored on FlashArray '$($global:Config.main.FlashArray.SourceArray)'! The VM snapshots won't created on the datastore '$($_.DatastoreName)'!" "Warning"
+                    Out-Log "The volume 'Serial:$($volSerial)' isn't stored on FlashArray '$($global:Config.main.FlashArray.SourceArray1)'! The VM snapshots won't created on the datastore '$($_.DatastoreName)'!" "Warning"
                     $excludedDatastores += $_.DatastoreName
                     return
                 }
@@ -212,19 +243,19 @@ Out-Log "SECTION FlashArray - source" "Host"
     Out-Log "REGION Prechecking" "Host"
     
   #Array is online?
-    Out-Log "Checking if the array $($global:config.main.FlashArray.SourceArray) is online..." "Host"
+    Out-Log "Checking if the array $($global:Config.main.FlashArray.SourceArray1) is online..." "Host"
     try {
-        Out-Log (Get-PfaArrayID -Array $SourceFA.Array | Out-String)
+        Out-Log (Get-PfaArrayID -Array $SourceActive.Array | Out-String)
     }
     catch {
-        Out-Log "The source array isn't online!" "Error"
+        Out-Log "The source array '$($SourceActive.Address)' isn't online!" "Error"
         Exit-Program -Exitcode 51
     }
 
   #POD exists and online?
     Out-Log "Checking if the pod '$($global:config.main.FlashArray.POD)' exists and healty..." "Host"
     $cmd = "purepod list $($global:config.main.FlashArray.POD)"
-    $clires = Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceFA
+    $clires = Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceActive
     if ($clires -ne $null) {
         $clires | % {
             if (!($_ -match '\sonline\s')) {
@@ -236,21 +267,21 @@ Out-Log "SECTION FlashArray - source" "Host"
 
   #Is POD empty?
     Out-Log "Checking if the pod '$($global:config.main.FlashArray.POD)' has any volumes..." "Host"
-    Out-Log ($SourceFA.getPODVolumes($global:Config.main.FlashArray.POD) | Out-String)
-    if (($SourceFA.getPODVolumes($global:Config.main.FlashArray.POD) | measure).Count -lt 1) {
-        Out-Log "The POD is empty or doesn't exists! POD: $($global:config.main.FlashArray.POD)" "Error"
+    Out-Log ($SourceActive.getPODVolumes($global:Config.main.FlashArray.POD) | Out-String)
+    if (($SourceActive.getPODVolumes($global:Config.main.FlashArray.POD) | measure).Count -lt 1) {
+        Out-Log "The POD '$($global:config.main.FlashArray.POD)' is empty or doesn't exist!" "Error"
         Exit-Program -Exitcode 27
     }
 
   #async Volumes exists?
     Out-Log "Checking if the async volumes are exists..." "Host"
-    $SourceFA.getPODVolumes($global:Config.main.FlashArray.POD) | % {
+    $SourceActive.getPODVolumes($global:Config.main.FlashArray.POD) | % {
         $chunkVolName = $_.name -split '::'
         $basename = "$($chunkVolName[1])-async"
-        $resGetVol = $SourceFA.Volumes | Where-Object {$_.name -like $basename}
+        $resGetVol = $SourceActive.Volumes | Where-Object {$_.name -like $basename}
         if ([string]::IsNullOrEmpty($resGetVol)) {
             Out-Log "   +---> The volume '$($_.name)' has NOT async partner! It will be created." "Host"
-            Out-Log (New-PfaVolume -Array $SourceFA.Array -VolumeName $basename -Size 1 -Unit M | Out-String)
+            Out-Log (New-PfaVolume -Array $SourceActive.Array -VolumeName $basename -Size 1 -Unit M | Out-String)
         } else {
             Out-Log "   +---> The volume '$($_.name)' has an async partner: $($basename)" "Host"
         }
@@ -258,19 +289,19 @@ Out-Log "SECTION FlashArray - source" "Host"
 
   #async PGroup exists? When doesn't exists than create it.
     Out-Log "Checking if the protecion group '$($global:config.main.FlashArray.POD)-async' exists..." "Host"
-    $SourceFA.ProtectionGroups = Get-PfaProtectionGroups -Array $SourceFA.Array
+    $SourceActive.ProtectionGroups = Get-PfaProtectionGroups -Array $SourceActive.Array
     $asyncPGroup = $global:config.main.FlashArray.POD + "-async"
-    Out-Log ($SourceFA.getAsyncPGroups($asyncPGroup) | Out-String)
-    if (($SourceFA.getAsyncPGroups($asyncPGroup) | measure).Count -lt 1) {
+    Out-Log ($SourceActive.getAsyncPGroups($asyncPGroup) | Out-String)
+    if (($SourceActive.getAsyncPGroups($asyncPGroup) | measure).Count -lt 1) {
         Out-Log "   +---> The protection group '$asyncPGroup' will be created." "Host"
         [array]$asyncVolumes = @()
-        $SourceFA.getPODVolumes($global:Config.main.FlashArray.POD) | % { $asyncVolumes += "$($_.name)-async" } 
-        Out-Log (New-PfaProtectionGroup -Array $SourceFA.Array -Name $asyncPGroup -Volumes ($asyncVolumes -replace "^.*::",'') -Targets ($TargetFA.Address -replace "\..*",'') | Out-String)
+        $SourceActive.getPODVolumes($global:Config.main.FlashArray.POD) | % { $asyncVolumes += "$($_.name)-async" } 
+        Out-Log (New-PfaProtectionGroup -Array $SourceActive.Array -Name $asyncPGroup -Volumes ($asyncVolumes -replace "^.*::",'') -Targets ($TargetFA.Address -replace "\..*",'') | Out-String)
     }
     
   #Is any transfer in progress? 
     Out-Log "Checking if a transfer is in progress, POD: '$($global:config.main.FlashArray.POD)-async' ..." "Host"
-    $runningTransfersObj = Get-PfaProtectionGroupSnapshotReplicationStatus -Array $SourceFA.Array -Name "$($global:config.main.FlashArray.POD)-async"
+    $runningTransfersObj = Get-PfaProtectionGroupSnapshotReplicationStatus -Array $SourceActive.Array -Name "$($global:config.main.FlashArray.POD)-async"
     Out-Log ($runningTransfersObj | Out-String)
     $runningTransfersObj | % {
         if ($_.progress -notmatch "^\s*$") {
@@ -287,16 +318,16 @@ Out-Log "SECTION FlashArray - source" "Host"
   #POD cloning
     Out-Log "Cloning the pod '$($global:config.main.FlashArray.POD)'..." "Host"
     $cmd = "purepod clone $($global:config.main.FlashArray.POD) $($global:config.main.FlashArray.POD)-podbackup"
-    Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceFA | Out-Null
+    Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceActive | Out-Null
 
   #Copying the volumes
     Out-Log "Copying each volume from the pod clone '$($global:config.main.FlashArray.POD)-podbackup'..." "Host"
-    $SourceFA.Volumes = Get-PfaVolumes -Array $SourceFA.Array
+    $SourceActive.Volumes = Get-PfaVolumes -Array $SourceActive.Array
     $pattern = $global:config.main.FlashArray.POD + '-podbackup::'
-    $PODBackupVolumes = $SourceFA.Volumes | Where-Object {$_.name -match $pattern}
+    $PODBackupVolumes = $SourceActive.Volumes | Where-Object {$_.name -match $pattern}
     Out-Log ($PODBackupVolumes | Out-String)
     if (($PODBackupVolumes | measure).Count -lt 1) {
-        Out-Log "The clone POD doesn't exists or no volumes copied! POD: $($global:config.main.FlashArray.POD)-podbackup" "Error"
+        Out-Log "The clone POD '$($global:config.main.FlashArray.POD)-podbackup' doesn't exist or no volumes copied!" "Error"
         Exit-Program -Exitcode 28
     }
     $PODBackupVolumes | % {
@@ -304,17 +335,17 @@ Out-Log "SECTION FlashArray - source" "Host"
         $basename = "$($chunkVolName[1])-async"
 
       #Check the volumes if contained in the async PGroup. When not containing than it will be added
-        if (!($SourceFA.getAsyncPGroups($asyncPGroup) | Where-Object {$_.volumes -match $basename})) {
-            Out-Log "   +---> Adding the volume '$($basename)' tothe protection group '$($global:config.main.FlashArray.POD)-async'..." "Host"
-            Out-Log (Add-PfaVolumesToProtectionGroup -Array $SourceFA.Array -Name "$($global:config.main.FlashArray.POD)-async" -VolumesToAdd $basename | Out-String)
+        if (!($SourceActive.getAsyncPGroups($asyncPGroup) | Where-Object {$_.volumes -match $basename})) {
+            Out-Log "   +---> Adding the volume '$($basename)' to the Protection Group '$($global:config.main.FlashArray.POD)-async'..." "Host"
+            Out-Log (Add-PfaVolumesToProtectionGroup -Array $SourceActive.Array -Name "$($global:config.main.FlashArray.POD)-async" -VolumesToAdd $basename | Out-String)
         }
 
       #Overwrite the async volume. This volume will be replicated
-        Out-Log (New-PfaVolume -Array $SourceFA.Array -Source $_.name -VolumeName $basename -Overwrite | Out-String)
+        Out-Log (New-PfaVolume -Array $SourceActive.Array -Source $_.name -VolumeName $basename -Overwrite | Out-String)
 
       #Delete pending snapshots
         $cmd = "purevol eradicate `$(purevol listobj --pending-only --type snap `"$($basename)`")"
-        Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceFA | Out-Null
+        Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceActive | Out-Null
     }
 #endregion 
 
@@ -323,9 +354,10 @@ Out-Log "SECTION FlashArray - source" "Host"
 
     Out-Log "Replicating the protection group '$($global:config.main.FlashArray.POD)' ..." "Host"
     try {
-        $resReplicateObj = New-PfaProtectionGroupSnapshot -Array $SourceFA.Array -Protectiongroupname "$($global:config.main.FlashArray.POD)-async" -ApplyRetention -ReplicateNow
+        $resReplicateObj = New-PfaProtectionGroupSnapshot -Array $SourceActive.Array -Protectiongroupname "$($global:config.main.FlashArray.POD)-async" -ApplyRetention -ReplicateNow
         Out-Log ($resReplicateObj | Out-String)
     } catch {
+        Out-Log "Replication failure:" "Error"
         Out-Log ($resReplicateObj | Out-String) "Error"
         Exit-Program -Exitcode 266
     }
@@ -339,7 +371,7 @@ Out-Log "SECTION FlashArray - source" "Host"
         $numberOfTrying++
         Out-Log "Waiting for tranfser... I'm waiting for $($global:config.main.FlashArray.WaitTransferSeconds) seconds. Trying $($numberOfTrying)" "Host"
         Start-Sleep -Seconds $global:config.main.FlashArray.WaitTransferSeconds
-        $runningTransfersObj = Get-PfaProtectionGroupSnapshotReplicationStatus -Array $SourceFA.Array -Name "$($global:config.main.FlashArray.POD)-async"
+        $runningTransfersObj = Get-PfaProtectionGroupSnapshotReplicationStatus -Array $SourceActive.Array -Name "$($global:config.main.FlashArray.POD)-async"
         Out-Log ($runningTransfersObj | Out-String)
         $runningTransfersObj | Where-Object { $_.name -like $pgroupSnapName} | % {
             if ($_.completed -notmatch "^\s*$") {
@@ -352,22 +384,23 @@ Out-Log "SECTION FlashArray - source" "Host"
   #Cleanin up - first delete/eradicate volumes
     Out-Log "Cleaning up..." "Host"
     $basename = $global:config.main.FlashArray.POD + "-podbackup"
-    $PODBackupVolumes = $SourceFA.Volumes | Where-Object {$_.name -match $basename}
+    $PODBackupVolumes = $SourceActive.Volumes | Where-Object {$_.name -match $basename}
     Out-Log "Getting the cloned volumes in cloned POD '$basename' ..."
     Out-Log ($PODBackupVolumes | Out-String)
     $PODBackupVolumes | % {
         Out-Log " - $($_.name)" "Host"
-        Out-Log (Remove-PfaVolumeOrSnapshot -Array $SourceFA.Array -Name $_.name)
-        Out-Log (Remove-PfaVolumeOrSnapshot -Array $SourceFA.Array -Name $_.name -Eradicate)
+        Out-Log (Remove-PfaVolumeOrSnapshot -Array $SourceActive.Array -Name $_.name)
+        Out-Log (Remove-PfaVolumeOrSnapshot -Array $SourceActive.Array -Name $_.name -Eradicate)
     }
 
   #Get Pending PGroup and delete/eradicate it
-    Out-Log "Destorying the pending PGroup..." "Host"
+    Out-Log "Destorying the pending Protection Group..." "Host"
     $cmd = "purepgroup list --pending --nvp"
     Out-Log "CLI Command: $($cmd)"
     try {
-        $clires = New-PfaCLICommand -EndPoint $SourceFA.Address -Credentials $SourceFA.Credential -CommandText $cmd
+        $clires = New-PfaCLICommand -EndPoint $SourceActive.Address -Credentials $SourceActive.Credential -CommandText $cmd
     } catch {
+        Out-Log "General error message:"
         Out-Log ($global:error[0].ToString()) "Error"
         Exit-Program -Exitcode 120
     }
@@ -376,8 +409,8 @@ Out-Log "SECTION FlashArray - source" "Host"
     if ($clires) {
         $clires | % {
             if ($_ -match "^Name=$($global:config.main.FlashArray.POD)-podbackup::") {
-                Out-Log (Remove-PfaProtectionGroupOrSnapshot -Array $SourceFA.Array -Name ($_ -replace "^Name=",''))
-                Out-Log (Remove-PfaProtectionGroupOrSnapshot -Array $SourceFA.Array -Name ($_ -replace "^Name=",'') -Eradicate)  
+                Out-Log (Remove-PfaProtectionGroupOrSnapshot -Array $SourceActive.Array -Name ($_ -replace "^Name=",''))
+                Out-Log (Remove-PfaProtectionGroupOrSnapshot -Array $SourceActive.Array -Name ($_ -replace "^Name=",'') -Eradicate)  
             }
         }
     }
@@ -385,11 +418,11 @@ Out-Log "SECTION FlashArray - source" "Host"
   #Destroy POD
     Out-Log "Destroying the POD '$($global:config.main.FlashArray.POD)-podbackup' ..." "Host"
     $cmd = "purepod destroy $($global:config.main.FlashArray.POD)-podbackup"
-    Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceFA | Out-Null
+    Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceActive | Out-Null
 
   #Eradicate POD
     $cmd = "purepod eradicate $($global:config.main.FlashArray.POD)-podbackup"
-    Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceFA | Out-Null
+    Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceActive | Out-Null
 
 #endregion
 
@@ -423,7 +456,7 @@ Out-Log "SECTION FlashArray - target" "Host"
 
   #Create volume copy from transfered snapshot  
     Out-Log "Creating volume copy from target snapshot..." "Host"
-    $basesource = $global:config.main.FlashArray.SourceArray -split '\.'
+    $basesource = $global:Config.main.FlashArray.SourceArray1 -split '\.'
     $allTargetSnapshots = Get-PfaAllVolumeSnapshots -Array $TargetFA.Array
     $snapNameSuffix = "^$($basesource[0]):$pgroupSnapName"
     $sortedTargetSnapshot = $allTargetSnapshots | Where-Object { $_.name -match  $snapNameSuffix }
@@ -476,7 +509,7 @@ Out-Log "SECTION FlashArray - target" "Host"
             }
         }
      } else {
-        Out-Log "There is no target snapshot of ProtectionGroup '$($basesource[0]):$($global:config.main.FlashArray.POD)-async'!" "Error"
+        Out-Log "There is no target snapshot of Protection Group '$($basesource[0]):$($global:config.main.FlashArray.POD)-async'!" "Error"
         Exit-Program -Exitcode 322
      }
 #endregion

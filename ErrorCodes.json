@@ -1,0 +1,21 @@
+{
+    "0":  "No Error. The script finished without failure.",
+    "1":  "The configuration '<ConfigFile>' isn't valid! Please check it!",
+    "5":  "The credential file '<CredentialFile>' doesn't exist!",
+    "6":  "The KeyFile '<Keyfile>' doesn't exist!",
+    "10":  "The element 'Keyfile' in the section 'general' is empty!",
+    "11":  "The element 'CredentialFile' in the section '<SECTION>' is empty!",
+    "15":  ""The vCenter '<vCenter>' isn't reachable over ICMP!",
+    "20":  "Both ActiveCluster member are UNAVAILABLE!",
+    "21":  "The connection to '<TargetArray>' was unsuccessful!",
+    "22":  "The connection to '<vCenter>' was unsuccessful!",
+    "26":  "The POD '<POD>' is not healty! Please repair it!",
+    "27":  "The POD '<POD>' is empty or doesn't exist!",
+    "28":  "The clone POD '<POD>-podbackup' doesn't exist or no volumes copied!",
+    "33":  "Transfer is processing! Try again later!",
+    "51":  "The source array '<SourceArray>' isn't online!",
+    "120":  "General error message: It's coming from FlashArray.",
+    "125":  "All datastores hash issues! Please check the logfile '<LogFile>'!",
+    "266":  "Replication failure: It's coming from FlashArray.",
+    "322":  "There is no target snapshot of Protection Group '<SourceArray>:<POD>-async'!"
+}

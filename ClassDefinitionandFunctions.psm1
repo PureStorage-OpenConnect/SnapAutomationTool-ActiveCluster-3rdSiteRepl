@@ -25,17 +25,19 @@ class FlashArray : Server {
     [void] Connect() {
         try {
             $this.Array = New-PfaArray -EndPoint $this.Address -Credentials $this.Credential -IgnoreCertificateError
-            Out-Log "Connection is SUCCESSFUL: `n$($this.Array | Out-String)"
+            Out-Log "The connection to '$($this.Address)' is SUCCESSFUL: `n$($this.Array | Out-String)"
         }
         catch {
             Out-Log "The connection to '$($this.Address)' was unsuccessful!`n$($Error[0])" "Error"
-            Exit-Program -Exitcode 1
         }
     }
 
     [void] Disconnect() {
-        Disconnect-PfaArray -Array $this.Array -ErrorAction SilentlyContinue
-        $this.Array = $null
+        if ($this.Array) {
+            Out-Log "Disconnecting '$($this.Address)'"
+            Disconnect-PfaArray -Array $this.Array -ErrorAction SilentlyContinue
+            $this.Array = $null
+        }
     }
 
     [System.Object[]] getPODVolumes([string]$pattern) {
@@ -70,16 +72,18 @@ class vCenter : Server {
     [void] Connect() {
         try {
             $this.VIServer = Connect-VIServer -Server $this.Address -Credential $this.Credential -NotDefault
-            Out-Log "Connection is SUCCESSFUL: `n$($this.vIServer | Out-String)"
+            Out-Log "The connection to '$($this.Address)' is SUCCESSFUL: `n$($this.vIServer | Out-String)"            
         }
         catch {
-            Out-Log "The connection to '$($this.vIServer)' was unsuccessful!`n$($Error[0])" "Error"
-            Exit-Program -Exitcode 1
+            Out-Log "The connection to '$($this.Address)' was unsuccessful!`n$($Error[0])" "Error"
         }
     }
 
     [void] Disconnect() {
-        Disconnect-VIServer -Server $this.VIServer -Force -Confirm:$false
-        $this.VIServer = $null
+        if ($this.VIServer) {
+            Out-Log "Disconnecting '$($this.Address)'"
+            Disconnect-VIServer -Server $this.VIServer -Force -Confirm:$false
+            $this.VIServer = $null
+        }
     }
 }
