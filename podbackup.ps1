@@ -195,7 +195,6 @@ if ($global:Config.main.vmware) {
         for ($i = 0; $i -lt $luns.Count; $i++) {
             if ($luns[$i] -like 'naa.624a9370*') {
                 $volSerial = ($luns[$i].ToUpper()).substring(12)
-                $volSerial = "E9B7C03A266F4F010009C369" #REMOVE
                 $pureVol = $SourceActive.Volumes | Where-Object { $_.serial -eq $volSerial }
                 if (!($pureVol)) {
                     Out-Log "The volume 'Serial:$($volSerial)' isn't stored on FlashArray '$($global:Config.main.FlashArray.SourceArray1)'! The VM snapshots won't created on the datastore '$($_.DatastoreName)'!" "Warning"
