@@ -25,7 +25,7 @@
 #Requires -Version 5
 #Requires -Modules @{ModuleName='PureStoragePowerShellSDK'; ModuleVersion='1.7.4.0'}
 #Requires -Modules @{ModuleName='VMware.VimAutomation.Core'; ModuleVersion='6.0.0.0'}
-Using module @{ModuleName='.\ClassDefinitionandFunctions.psd1'; RequiredVersion='1.0.1.0'}
+Using module @{ModuleName='.\lib\ClassDefinitionandFunctions.psd1'; RequiredVersion='1.0.1.0'}
 
 
 [CmdletBinding()]
@@ -44,8 +44,8 @@ $global:originalVariablePreferences = @{"DebugPreference" = $DebugPreference;
                                         "ErrorActionPreference" = $ErrorActionPreference
                                        }
 
-Set-Variable -Name DebugPreference -Value "Continue" -Scope Global -Force
-Set-Variable -Name InformationPreference -Value "Continue" -Scope Global -Force
+Set-Variable -Name DebugPreference -Value "SilentlyContinue" -Scope Global -Force
+Set-Variable -Name InformationPreference -Value "SilentlyContinue" -Scope Global -Force
 Set-Variable -Name WarningPreference -Value "Continue" -Scope Global -Force
 Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
 
@@ -57,7 +57,7 @@ Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
     Write-Debug "REGION Reading config file"
     $ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
     try {
-        Import-Module -Name $ScriptDirectory\GaborFunctions.psd1 -MinimumVersion 1.0.1.0 -Force 
+        Import-Module -Name $ScriptDirectory\lib\GaborFunctions.psd1 -MinimumVersion 1.0.1.0 -Force 
     }
     catch {
         Write-Error "Error while loading GaborFunctions.psd1!"
@@ -65,7 +65,7 @@ Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
     }
 
     try {
-        Import-Module -Name $ScriptDirectory\BusinessLogicFunctions.psm1 -Force 
+        Import-Module -Name $ScriptDirectory\lib\BusinessLogicFunctions.psm1 -Force 
     }
     catch {
         Write-Error "Error while loading BusinessLogicFunctions.psm1!"
@@ -174,18 +174,18 @@ Set-Variable -Name ErrorActionPreference -Value "Stop" -Scope Global -Force
     Out-Log ($SourceActive.Volumes | Select-Object -Property Name,Serial | Format-Table -AutoSize | Out-String)
 #endregion
 
-
+Write-Host $null
 #########################################
 # vmware - create  section              #
 #########################################
-Out-Log "SECTION vmware - create"
+Out-Log "SECTION vmware - create" "Host"
 
 if ($global:Config.main.vmware) {
 #region vmware - create
     Out-Log "REGION vmware - create"
   #Check if the datastores stored in PureStorage and the POD contains these volumes.
     $volumePrefixPOD = '^' + $global:Config.main.FlashArray.POD + '::'
-    Out-Log "Checking the which datastore on which volume stored..." "Host"
+    Out-Log "Checking which datastore on which volume stored..." "Host"
     [array]$excludedDatastores = @()
     [array]$datastores = @()
     [array]$vmsOnDataStores = @()
@@ -234,16 +234,18 @@ if ($global:Config.main.vmware) {
 }
 
 
+Write-Host $null
 #########################################
 # FlashArray - source section           #
 #########################################
 Out-Log "SECTION FlashArray - source" "Host"
 
+Write-Host $null
 #region Prechecking
     Out-Log "REGION Prechecking" "Host"
     
   #Array is online?
-    Out-Log "Checking if the array $($global:Config.main.FlashArray.SourceArray1) is online..." "Host"
+    Out-Log "Checking if the array '$($global:Config.main.FlashArray.SourceArray1)' is online..." "Host"
     try {
         Out-Log (Get-PfaArrayID -Array $SourceActive.Array | Out-String)
     }
@@ -253,7 +255,7 @@ Out-Log "SECTION FlashArray - source" "Host"
     }
 
   #POD exists and online?
-    Out-Log "Checking if the pod '$($global:config.main.FlashArray.POD)' exists and healty..." "Host"
+    Out-Log "Checking if the POD '$($global:config.main.FlashArray.POD)' exists and healty..." "Host"
     $cmd = "purepod list $($global:config.main.FlashArray.POD)"
     $clires = Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceActive
     if ($clires -ne $null) {
@@ -266,7 +268,7 @@ Out-Log "SECTION FlashArray - source" "Host"
     }
 
   #Is POD empty?
-    Out-Log "Checking if the pod '$($global:config.main.FlashArray.POD)' has any volumes..." "Host"
+    Out-Log "Checking if the POD '$($global:config.main.FlashArray.POD)' has any volumes..." "Host"
     Out-Log ($SourceActive.getPODVolumes($global:Config.main.FlashArray.POD) | Out-String)
     if (($SourceActive.getPODVolumes($global:Config.main.FlashArray.POD) | measure).Count -lt 1) {
         Out-Log "The POD '$($global:config.main.FlashArray.POD)' is empty or doesn't exist!" "Error"
@@ -288,7 +290,7 @@ Out-Log "SECTION FlashArray - source" "Host"
     }
 
   #async PGroup exists? When doesn't exists than create it.
-    Out-Log "Checking if the protecion group '$($global:config.main.FlashArray.POD)-async' exists..." "Host"
+    Out-Log "Checking if the Protecion Group '$($global:config.main.FlashArray.POD)-async' exists..." "Host"
     $SourceActive.ProtectionGroups = Get-PfaProtectionGroups -Array $SourceActive.Array
     $asyncPGroup = $global:config.main.FlashArray.POD + "-async"
     Out-Log ($SourceActive.getAsyncPGroups($asyncPGroup) | Out-String)
@@ -312,16 +314,17 @@ Out-Log "SECTION FlashArray - source" "Host"
 
 #endregion
 
+Write-Host $null
 #region Cloning and copying
     Out-Log "REGION Cloning and copying" "Host"
 
   #POD cloning
-    Out-Log "Cloning the pod '$($global:config.main.FlashArray.POD)'..." "Host"
+    Out-Log "Cloning the POD '$($global:config.main.FlashArray.POD)'..." "Host"
     $cmd = "purepod clone $($global:config.main.FlashArray.POD) $($global:config.main.FlashArray.POD)-podbackup"
     Invoke-PureCLICommand -Command $cmd -FlashArrayObject $SourceActive | Out-Null
 
   #Copying the volumes
-    Out-Log "Copying each volume from the pod clone '$($global:config.main.FlashArray.POD)-podbackup'..." "Host"
+    Out-Log "Copying each volume from the POD clone '$($global:config.main.FlashArray.POD)-podbackup'..." "Host"
     $SourceActive.Volumes = Get-PfaVolumes -Array $SourceActive.Array
     $pattern = $global:config.main.FlashArray.POD + '-podbackup::'
     $PODBackupVolumes = $SourceActive.Volumes | Where-Object {$_.name -match $pattern}
@@ -349,10 +352,11 @@ Out-Log "SECTION FlashArray - source" "Host"
     }
 #endregion 
 
+Write-Host $null
 #region Replicating and cleaning up
     Out-Log "REGION Replicating and cleaning up" "Host"
 
-    Out-Log "Replicating the protection group '$($global:config.main.FlashArray.POD)' ..." "Host"
+    Out-Log "Replicating the Protection Group '$($global:config.main.FlashArray.POD)' ..." "Host"
     try {
         $resReplicateObj = New-PfaProtectionGroupSnapshot -Array $SourceActive.Array -Protectiongroupname "$($global:config.main.FlashArray.POD)-async" -ApplyRetention -ReplicateNow
         Out-Log ($resReplicateObj | Out-String)
@@ -364,7 +368,7 @@ Out-Log "SECTION FlashArray - source" "Host"
     $pgroupSnapName = $resReplicateObj.name  
 
   #Checking if the transfer is completed
-    Out-Log "Checking if the pgroup transfer is completed..." "Host"
+    Out-Log "Checking if the Protection Group transfer is completed..." "Host"
     $numberOfTrying = 0
     while ($true)
     {
@@ -427,6 +431,7 @@ Out-Log "SECTION FlashArray - source" "Host"
 #endregion
 
 
+Write-Host $null
 #########################################
 # vmware - delete  section              #
 #########################################
@@ -446,6 +451,7 @@ if ($global:config.main.vmware) {
 }
 
 
+Write-Host $null
 #########################################
 # FlashArray - target section           #
 #########################################
@@ -500,7 +506,7 @@ Out-Log "SECTION FlashArray - target" "Host"
                         for ($i = 0; $i -lt $countOfDelete; $i++)
                         {
                             $targetVolumeNameToDelete = ($sortedHashVolumesCreated | Select-Object -Index $i).Value
-                            Out-Log "   +--->The following volmue will be deleted: $targetVolumeNameToDelete" "Host"
+                            Out-Log "   +---> The following volmue will be deleted: $targetVolumeNameToDelete" "Host"
                             Out-Log (Remove-PfaVolumeOrSnapshot -Array $TargetFA.Array -Name $targetVolumeNameToDelete | Out-String)
                             Out-Log (Remove-PfaVolumeOrSnapshot -Array $TargetFA.Array -Name $targetVolumeNameToDelete -Eradicate | Out-String)
                         }
@@ -520,4 +526,5 @@ Out-Log "SECTION FlashArray - target" "Host"
 #########################################
 
 
+Write-Host $null
 Exit-Program
