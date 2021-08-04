@@ -1,3 +1,5 @@
+#### This repository is now archived.
+
 # SnapAutomationTool-ActiveCluster-3rdSiteRepl
 
 Snap Automaintion Tool for VMware and ActiveCluster 3rd site Replication
